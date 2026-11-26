@@ -109,13 +109,36 @@ async def chat(m:Message):
         elif "permission" in kind or "unauthenticated" in kind: msg="Gemini API kalitini tekshirish kerak."
         else: msg="AI xizmatida vaqtinchalik xatolik. Keyinroq urinib ko'ring."
         await m.answer("⚠️ "+msg)
+async def health_handler(reader, writer):
+    try:
+        await reader.read(1024)
+        body = b"UzbAI is running"
+        writer.write(
+            b"HTTP/1.1 200 OK\r\n"
+            b"Content-Type: text/plain; charset=utf-8\r\n"
+            b"Content-Length: " + str(len(body)).encode() + b"\r\n"
+            b"Connection: close\r\n\r\n" + body
+        )
+        await writer.drain()
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
 async def main():
     init_db()
-    log.info("UzbAI started: model=%s",MODEL)
-    try: await dp.start_polling(bot)
+    port = int(os.getenv("PORT", "10000"))
+    server = await asyncio.start_server(health_handler, "0.0.0.0", port)
+    log.info("UzbAI web health server listening on port %s", port)
+    log.info("UzbAI Telegram bot started: model=%s", MODEL)
+    try:
+        async with server:
+            await dp.start_polling(bot)
     finally:
+        server.close()
+        await server.wait_closed()
         await bot.session.close()
         await gemini.aio.aclose()
+
 if __name__=="__main__":
     try: asyncio.run(main())
     except (KeyboardInterrupt,SystemExit): log.info("Bot stopped.")
