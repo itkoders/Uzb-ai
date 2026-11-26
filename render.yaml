@@ -1,0 +1,17 @@
+services:
+  - type: worker
+    name: uzbai-telegram-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python uzbeai.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: ADMIN_IDS
+        sync: false
+      - key: DB_PATH
+        value: uzbai_data.db
